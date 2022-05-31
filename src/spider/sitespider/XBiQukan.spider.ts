@@ -98,7 +98,8 @@ export class XBiQukanSpider extends BaseSpider {
     async fetchChapterDetail(chapterVO: SpiderSiteBookChapterVO): Promise<any> {
         const page = await this.askPage();
         await page.goto(chapterVO.chapterURL, { waitUntil: 'networkidle2' });
-        await page.waitForSelector('#content');
+        // await page.waitForSelector('#content');
+        await Utils.sleep(3000);
         const chapterContent = await page.evaluate(() => {
             const contentSel = '#content';
             const contentDom = document.querySelector(contentSel);

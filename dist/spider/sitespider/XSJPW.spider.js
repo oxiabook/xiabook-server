@@ -14,6 +14,7 @@ const spider_base_1 = require("../spider.base");
 const spider_define_1 = require("../spider.define");
 const _ = require("lodash");
 const node_html_markdown_1 = require("node-html-markdown");
+const Utils_1 = require("../Utils");
 class XSJPWSpider extends spider_base_1.BaseSpider {
     constructor() {
         super(...arguments);
@@ -64,7 +65,7 @@ class XSJPWSpider extends spider_base_1.BaseSpider {
             console.log(`fetchBookChapters:${indexPage}`);
             const page = yield this.askPage();
             yield page.goto(indexPage, { waitUntil: 'networkidle2' });
-            yield page.waitForSelector('.dirList');
+            yield Utils_1.default.sleep(3000);
             const chapters = yield page.evaluate(() => {
                 const baseUrl = 'http://47.106.243.172:8888';
                 const liaSel = 'body > div.main.box_center.cf > div.channelWrap.channelChapterlist.cf.mb50 > div > div.dirWrap.cf > div > ul > li > a';

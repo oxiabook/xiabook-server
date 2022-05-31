@@ -69,18 +69,45 @@ export class SpiderManagerService {
         // await this.fetchQDBookChapter(name);
     }
 
-    async grabSiteChaptersFromCache(site:SpiderSite, bookName:string) {
-        const key = `bookchapters_${site}_${bookName}`;
-        let siteChapters: SpiderSiteBookChapterVO[] = await this.cacheManager.get(key);
-        if (_.isEmpty(siteChapters)) {
-            const spider = await SpiderFactory.createSpider(site);
-            const bookQueryVO = await spider.queryBook(bookName);
-            if (!bookQueryVO) return [];
-            siteChapters = await spider.fetchBookChapters(bookQueryVO.indexPage);
-            // console.log(`siteChapters:${siteChapters.length}`);
-            await this.cacheManager.set(key, siteChapters, { ttl: 36000 });
+    async getSiteChaptersFromCache(queryEntity: BooksQueryEntity) {
+        console.log(`getSiteChaptersFromCache:${queryEntity.siteKey} ${queryEntity.bookName}`)
+        const key = `bookchaptermap_${queryEntity.siteKey}_${queryEntity.bookName}`;
+        const chapters = await this.cacheManager.get(key);
+        // console.log(`siteChapterMap:${siteChapterMap} ${JSON.stringify(siteChapterMap)}`)
+        // let siteChapters: SpiderSiteBookChapterVO[] = await this.cacheManager.get(key);
+        if (_.isEmpty(chapters)) {
+            const spider = await SpiderFactory.createSpider(queryEntity.siteKey as SpiderSite);
+            const chapters = await spider.fetchBookChapters(queryEntity.indexPage);
+            if (chapters.length === 0) return false;
+            await this.cacheManager.set(key, chapters, { ttl: 36000 });
         }
-        return siteChapters;
+        return chapters;
+    }
+
+    async grabOneChapterFromOneSite(siteChapterVO:SpiderSiteBookChapterVO) {
+        console.log(`grabOneChapterFromOneSite:${siteChapterVO.bookName} ${siteChapterVO.indexId} ${siteChapterVO.siteKey}`)
+        const spider = await SpiderFactory.createSpider(siteChapterVO.siteKey as SpiderSite);
+        const chapterContentVO = await spider.fetchChapterDetail(siteChapterVO);
+        // console.log(`bookName:${bookName} chapterContentVO:${JSON.stringify(chapterContentVO)}`);
+        let addOrSub = 0;
+        if (chapterContentVO.content) {
+            addOrSub = 1;
+        } else {
+            addOrSub = -1;
+        }
+        console.log(`grabOneChapterFromOneSite:${chapterContentVO.content.length}`)
+        // console.log(`xxxxxxx:${JSON.stringify(chapterContentVO)}`)
+        await this.updateBookSiteWeight(siteChapterVO.bookName, siteChapterVO.siteKey, addOrSub);
+        if (chapterContentVO.content) {
+            await this.saveChapterContent(siteChapterVO.bookName, chapterContentVO);
+            await this.updateChapterFetched(siteChapterVO.bookName, chapterContentVO.indexId);
+        }
+        return chapterContentVO.content !== "";
+    }
+
+    async updateBookSiteWeight(bookName: string, siteKey:SpiderSite|string, addOrSub:number) {
+        const res = await this.queryRepository.update({bookName, siteKey}, {weight: () => `weight+${addOrSub}`})
+        return res.affected === 1;
     }
 
     /**
@@ -89,36 +116,22 @@ export class SpiderManagerService {
      * @param qdChapterEntity 
      */
     async grabOneChapter(bookName:string, qdChapterEntity: ChapterEntity) {
-        // console.log(`grabOneChapter:${bookName} ${qdChapterEntity.indexId}`)
+        console.log(`grabOneChapter:${bookName} ${qdChapterEntity.indexId}`)
         const allQuerys = await this.getBookAllQuery(bookName);
         for (const queryEntity of allQuerys) {
-            console.log(`grabOneChapter:${queryEntity.siteKey} ${bookName} ${qdChapterEntity.indexId}`)
-            const siteChapters = await this.grabSiteChaptersFromCache(queryEntity.siteKey as SpiderSite, bookName);
-            if (siteChapters.length == 0) continue;
-            // fs.writeFileSync(`${queryEntity.siteKey}-chapters.json`, JSON.stringify(siteChapters));
-            for (const siteChapterVO of siteChapters) {
-                if (qdChapterEntity.title != siteChapterVO.title) {
-                    // console.log(`qd:${qdChapterEntity.title} - ${siteChapterVO.title}`);
-                    continue;
-                }
-                console.log(`${queryEntity.siteKey} qd:${qdChapterEntity.title} - ${siteChapterVO.title}`);
-                // console.log(`siteChapterVO:${JSON.stringify(siteChapterVO)}`);
-                // console.log(`qdChapterEntity:${JSON.stringify(qdChapterEntity)}`);
-                siteChapterVO.indexId = qdChapterEntity.indexId;
-                const spider = await SpiderFactory.createSpider(queryEntity.siteKey as SpiderSite);
-                const chapterContentVO = await spider.fetchChapterDetail(siteChapterVO);
-                // console.log(`bookName:${bookName} chapterContentVO:${JSON.stringify(chapterContentVO)}`);
-                if (chapterContentVO.content) {
-                    queryEntity.weight =  queryEntity.weight + 1;
-                    if (queryEntity.weight > 100) queryEntity.weight = 100;
-                } else {
-                    queryEntity.weight =  queryEntity.weight - 1;
-                }
-                // console.log(`xxxxxxx:${JSON.stringify(chapterContentVO)}`)
-                await this.updateBookQueryWeight(queryEntity);
-                await this.saveChapterContent(bookName, chapterContentVO);
-                await this.updateChapterFetched(bookName, chapterContentVO.indexId);
-            }
+            // console.log(`grabOneChapter:${queryEntity.siteKey} ${bookName} ${qdChapterEntity.indexId}`)
+            const siteChapters = await this.getSiteChaptersFromCache(queryEntity);
+            // console.log(`siteChapterMap:${JSON.stringify(siteChapterMap)}`);
+            if (!siteChapters) continue;
+            const siteChapterVO = _.find(siteChapters, {title:qdChapterEntity.title});
+            // const siteChapterVO = siteChapterMap[qdChapterEntity.title]
+            if (!siteChapterVO) continue;
+            siteChapterVO.indexId = qdChapterEntity.indexId;
+            siteChapterVO.bookName = qdChapterEntity.bookName;
+            // console.log(`xxx:${JSON.stringify(siteChapterVO)}`);
+            const ret = await this.grabOneChapterFromOneSite(siteChapterVO);
+            console.log(`grab res:${ret}`)
+            if (!ret) continue;
             break;
         }
     }
@@ -127,34 +140,12 @@ export class SpiderManagerService {
         console.log(`grabBookChapters:${bookName}, ${indexs}`)
         const qdChapters = await this.queryBookNeedFetchChapters(bookName, indexs);
         // const allQuerys = await this.getBookAllQuery(bookName);
-        // console.log(`allQuerys:${JSON.stringify(allQuerys)}`)
+        // console.log(`allQuerys:${JSON.stringify(qdChapters)}`)
         for (const qdChapterEntity of qdChapters) {
             await this.grabOneChapter(bookName, qdChapterEntity);
-            await Utils.sleep(3000);
+            await Utils.sleep(100);
         }
 
-        // for (const queryEntity of allQuerys) {
-        //     const siteChapters = await this.grabSiteChaptersFromCache(queryEntity.siteKey as SpiderSite, bookName);
-        //     const needFetchChapters:SpiderSiteBookChapterVO[] = [];
-        //     for (const chapterEntity of qdChapters) {
-        //         for (const siteChapterVO of siteChapters) {
-        //             if (chapterEntity.title === siteChapterVO.title) {
-        //                 siteChapterVO.indexId = chapterEntity.indexId;
-        //                 needFetchChapters.push(siteChapterVO);
-        //             }
-        //         }
-        //     }
-        //     console.log(`needFetchChapters:${JSON.stringify(needFetchChapters)}`);
-        //     for (const siteChapterVO of needFetchChapters) {
-        //         const spider = await SpiderFactory.createSpider(queryEntity.siteKey as SpiderSite);
-        //         const chapterContentVO = await spider.fetchChapterDetail(siteChapterVO);
-        //         console.log(`bookName:${bookName} chapterContentVO:${JSON.stringify(chapterContentVO)}`);
-        //         await this.saveChapterContent(bookName, chapterContentVO)
-        //         await this.updateChapterFetched(bookName, chapterContentVO.indexId)
-        //         await Utils.sleep(3000);
-        //     }
-        //     // await this.saveBookQuery(bookQueryVO);
-        // }
     }
 
     async saveChapterContent(bookName:string, chapterContentVO: SpiderSiteBookChapterContentVO) {
@@ -166,9 +157,9 @@ export class SpiderManagerService {
         fs.writeFileSync(filename, content);
     }
 
-    async updateBookQueryWeight(bookQueryEntity: BooksQueryEntity) {
-        return await this.queryRepository.save(bookQueryEntity);
-    }
+    // async updateBookQueryWeight(bookQueryEntity: BooksQueryEntity) {
+    //     return await this.queryRepository.save(bookQueryEntity);
+    // }
 
     /**
      * 更新章节已抓取

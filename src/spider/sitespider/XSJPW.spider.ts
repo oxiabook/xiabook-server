@@ -3,6 +3,7 @@ import { BaseSpider } from '../spider.base';
 import { BookQueryVO, SpiderSite, SpiderSiteBookChapterContentVO, SpiderSiteBookChapterVO } from '../spider.define';
 import * as _ from 'lodash'
 import { NodeHtmlMarkdown, NodeHtmlMarkdownOptions } from 'node-html-markdown'
+import Utils from '../Utils';
 
 /**
  * 小说精品层爬虫实现
@@ -64,7 +65,8 @@ export class XSJPWSpider extends BaseSpider {
         const page = await this.askPage();
         // await page.emulate(devices['iPhone X'])
         await page.goto(indexPage, { waitUntil: 'networkidle2' });
-        await page.waitForSelector('.dirList');
+        // await page.waitForSelector('.dirList');
+        await Utils.sleep(3000);
         const chapters = await page.evaluate(() => {
             const baseUrl = 'http://47.106.243.172:8888';
             const liaSel = 'body > div.main.box_center.cf > div.channelWrap.channelChapterlist.cf.mb50 > div > div.dirWrap.cf > div > ul > li > a';

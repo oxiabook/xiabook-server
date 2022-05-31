@@ -98,7 +98,7 @@ class XBiQukanSpider extends spider_base_1.BaseSpider {
         return __awaiter(this, void 0, void 0, function* () {
             const page = yield this.askPage();
             yield page.goto(chapterVO.chapterURL, { waitUntil: 'networkidle2' });
-            yield page.waitForSelector('#content');
+            yield Utils_1.default.sleep(3000);
             const chapterContent = yield page.evaluate(() => {
                 const contentSel = '#content';
                 const contentDom = document.querySelector(contentSel);

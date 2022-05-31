@@ -60,49 +60,65 @@ let SpiderManagerService = class SpiderManagerService {
             }
         });
     }
-    grabSiteChaptersFromCache(site, bookName) {
+    getSiteChaptersFromCache(queryEntity) {
         return __awaiter(this, void 0, void 0, function* () {
-            const key = `bookchapters_${site}_${bookName}`;
-            let siteChapters = yield this.cacheManager.get(key);
-            if (_.isEmpty(siteChapters)) {
-                const spider = yield spider_fatrory_1.SpiderFactory.createSpider(site);
-                const bookQueryVO = yield spider.queryBook(bookName);
-                if (!bookQueryVO)
-                    return [];
-                siteChapters = yield spider.fetchBookChapters(bookQueryVO.indexPage);
-                yield this.cacheManager.set(key, siteChapters, { ttl: 36000 });
+            console.log(`getSiteChaptersFromCache:${queryEntity.siteKey} ${queryEntity.bookName}`);
+            const key = `bookchaptermap_${queryEntity.siteKey}_${queryEntity.bookName}`;
+            const chapters = yield this.cacheManager.get(key);
+            if (_.isEmpty(chapters)) {
+                const spider = yield spider_fatrory_1.SpiderFactory.createSpider(queryEntity.siteKey);
+                const chapters = yield spider.fetchBookChapters(queryEntity.indexPage);
+                if (chapters.length === 0)
+                    return false;
+                yield this.cacheManager.set(key, chapters, { ttl: 36000 });
             }
-            return siteChapters;
+            return chapters;
+        });
+    }
+    grabOneChapterFromOneSite(siteChapterVO) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`grabOneChapterFromOneSite:${siteChapterVO.bookName} ${siteChapterVO.indexId} ${siteChapterVO.siteKey}`);
+            const spider = yield spider_fatrory_1.SpiderFactory.createSpider(siteChapterVO.siteKey);
+            const chapterContentVO = yield spider.fetchChapterDetail(siteChapterVO);
+            let addOrSub = 0;
+            if (chapterContentVO.content) {
+                addOrSub = 1;
+            }
+            else {
+                addOrSub = -1;
+            }
+            console.log(`grabOneChapterFromOneSite:${chapterContentVO.content.length}`);
+            yield this.updateBookSiteWeight(siteChapterVO.bookName, siteChapterVO.siteKey, addOrSub);
+            if (chapterContentVO.content) {
+                yield this.saveChapterContent(siteChapterVO.bookName, chapterContentVO);
+                yield this.updateChapterFetched(siteChapterVO.bookName, chapterContentVO.indexId);
+            }
+            return chapterContentVO.content !== "";
+        });
+    }
+    updateBookSiteWeight(bookName, siteKey, addOrSub) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const res = yield this.queryRepository.update({ bookName, siteKey }, { weight: () => `weight+${addOrSub}` });
+            return res.affected === 1;
         });
     }
     grabOneChapter(bookName, qdChapterEntity) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log(`grabOneChapter:${bookName} ${qdChapterEntity.indexId}`);
             const allQuerys = yield this.getBookAllQuery(bookName);
             for (const queryEntity of allQuerys) {
-                console.log(`grabOneChapter:${queryEntity.siteKey} ${bookName} ${qdChapterEntity.indexId}`);
-                const siteChapters = yield this.grabSiteChaptersFromCache(queryEntity.siteKey, bookName);
-                if (siteChapters.length == 0)
+                const siteChapters = yield this.getSiteChaptersFromCache(queryEntity);
+                if (!siteChapters)
                     continue;
-                for (const siteChapterVO of siteChapters) {
-                    if (qdChapterEntity.title != siteChapterVO.title) {
-                        continue;
-                    }
-                    console.log(`${queryEntity.siteKey} qd:${qdChapterEntity.title} - ${siteChapterVO.title}`);
-                    siteChapterVO.indexId = qdChapterEntity.indexId;
-                    const spider = yield spider_fatrory_1.SpiderFactory.createSpider(queryEntity.siteKey);
-                    const chapterContentVO = yield spider.fetchChapterDetail(siteChapterVO);
-                    if (chapterContentVO.content) {
-                        queryEntity.weight = queryEntity.weight + 1;
-                        if (queryEntity.weight > 100)
-                            queryEntity.weight = 100;
-                    }
-                    else {
-                        queryEntity.weight = queryEntity.weight - 1;
-                    }
-                    yield this.updateBookQueryWeight(queryEntity);
-                    yield this.saveChapterContent(bookName, chapterContentVO);
-                    yield this.updateChapterFetched(bookName, chapterContentVO.indexId);
-                }
+                const siteChapterVO = _.find(siteChapters, { title: qdChapterEntity.title });
+                if (!siteChapterVO)
+                    continue;
+                siteChapterVO.indexId = qdChapterEntity.indexId;
+                siteChapterVO.bookName = qdChapterEntity.bookName;
+                const ret = yield this.grabOneChapterFromOneSite(siteChapterVO);
+                console.log(`grab res:${ret}`);
+                if (!ret)
+                    continue;
                 break;
             }
         });
@@ -113,7 +129,7 @@ let SpiderManagerService = class SpiderManagerService {
             const qdChapters = yield this.queryBookNeedFetchChapters(bookName, indexs);
             for (const qdChapterEntity of qdChapters) {
                 yield this.grabOneChapter(bookName, qdChapterEntity);
-                yield Utils_1.default.sleep(3000);
+                yield Utils_1.default.sleep(100);
             }
         });
     }
@@ -125,11 +141,6 @@ let SpiderManagerService = class SpiderManagerService {
             const filename = `${process.cwd()}/runtime/books/${bookName}/${chapterContentVO.indexId}.md`;
             Utils_1.default.checkdir(filename);
             fs.writeFileSync(filename, content);
-        });
-    }
-    updateBookQueryWeight(bookQueryEntity) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.queryRepository.save(bookQueryEntity);
         });
     }
     updateChapterFetched(bookName, indexId) {
