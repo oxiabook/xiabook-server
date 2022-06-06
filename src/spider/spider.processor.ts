@@ -1,4 +1,4 @@
-import { Processor, Process, OnQueueActive } from '@nestjs/bull';
+import { Processor, Process, OnQueueActive, OnQueueCompleted } from '@nestjs/bull';
 import { Job } from 'bull';
 import { SpiderManagerService } from './spidermanager.service';
 /**
@@ -19,9 +19,16 @@ export class SpiderProcessor {
     @Process("ChapterPreGrab")
     async ChapterPreGrab(job: Job<unknown>) {
         console.log(`quene processor:ChapterPreGrab ${JSON.stringify(job)}`)
-        await this.prefetchChapter(job.data);
-        job.progress(100);
-        return {};
+        const ret = await this.prefetchChapter(job.data);
+        console.log(`queue:1111`)
+        await job.progress(100);
+        console.log(`queue:2222`)
+        // await job.finished();
+        // await job.remove();
+        await job.moveToCompleted();
+        console.log(`queue:3333`)
+        console.log(`quene processor:ChapterPreGrab ${JSON.stringify(job)} done`)
+        return ret;
     }
     
     @Process("ReQueryBook")
@@ -44,7 +51,6 @@ export class SpiderProcessor {
         job.progress(100);
         return {};
     }
-    
 
     @OnQueueActive()
     onActive(job: Job) {
@@ -53,18 +59,22 @@ export class SpiderProcessor {
         );
     }
 
+    // @OnQueueCompleted()
+    // oncompleted(job: Job) {
+    //     console.log(
+    //         `job complete ${JSON.stringify(job.data)}`
+    //     );
+    // }
     private async prefetchChapter(data: any) {
         // this.spiderManager.grabBookChapters(data.bookName, [100,101,102,103])
-        // console.log(`doSomething:${JSON.stringify(data)}`)
+        console.log(`prefetchChapter:${JSON.stringify(data)}`)
         const bookName = data.bookName;
         let indexId = data.indexId;
-        indexId = parseInt(indexId + "")
-        const indexs = [indexId];
-        for (let i = 0; i <= 10; i++) {
-            indexId += 1;
-            indexs.push(indexId);
-        }
-        await this.spiderManager.grabBookChapters(bookName, indexs);
+        indexId = parseInt(indexId)
+        // const indexs = [indexId];
+        const ret = await this.spiderManager.grabBookChapter(bookName, indexId);
+        console.log(`prefetchChapter:${ret}`);
+        return ret
     }
 
     private async doBookInit(data:any) {
@@ -73,7 +83,9 @@ export class SpiderProcessor {
         const bookName = data.bookName;
         await this.spiderManager.queryBookSites(bookName);
         await this.spiderManager.grabQDBookChapter(bookName);
-        await this.spiderManager.grabBookChapters(bookName, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        for (let i = 0; i <= 10; i++) {
+            await this.spiderManager.grabBookChapter(bookName, 1);
+        }
     }
 
     private async grabQDBookChapter(data:any) {

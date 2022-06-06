@@ -48,15 +48,16 @@ export class XBiQukanSpider extends BaseSpider {
                     return false;
                 }
             });
+            if (bookInfo) {
+                bookInfo.siteKey = this.siteKey;
+            }
         } catch (error) {
             bookInfo = false;
         }
         // await page.waitForSelector('#maininfo');
         await Utils.sleep(1000);
         await this.releasePage(page);
-        if (bookInfo) {
-            bookInfo.siteKey = this.siteKey;
-        }
+
         console.log(`bookInfo:${JSON.stringify(bookInfo)}`);
         return bookInfo;
     }
@@ -96,16 +97,25 @@ export class XBiQukanSpider extends BaseSpider {
     }
 
     async fetchChapterDetail(chapterVO: SpiderSiteBookChapterVO): Promise<any> {
-        const page = await this.askPage();
-        await page.goto(chapterVO.chapterURL, { waitUntil: 'networkidle2' });
-        // await page.waitForSelector('#content');
-        await Utils.sleep(3000);
-        const chapterContent = await page.evaluate(() => {
-            const contentSel = '#content';
-            const contentDom = document.querySelector(contentSel);
-            // console.log(contentDom.textContent)
-            return contentDom.textContent;
-        });
+        console.log(`fetchChapterDetail`)
+        let chapterContent = ""
+        let page;
+        try {
+            page = await this.askPage();
+            await page.goto(chapterVO.chapterURL, { waitUntil: 'networkidle2' });
+            // await page.waitForSelector('#content');
+            await Utils.sleep(3000);
+            chapterContent = await page.evaluate(() => {
+                const contentSel = '#content';
+                const contentDom = document.querySelector(contentSel);
+                // console.log(contentDom.textContent)
+                return contentDom.textContent;
+            });
+        } catch (error) {
+            chapterContent = ""
+            console.error(error)
+        }
+ 
         // console.log('chapterContent', chapterContent)
         const chapterContentVO = (chapterVO as SpiderSiteBookChapterContentVO);
         chapterContentVO.content = chapterContent

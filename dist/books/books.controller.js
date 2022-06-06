@@ -42,9 +42,6 @@ let BooksController = class BooksController {
             if (!booksEntity) {
                 booksEntity = yield this.booksService.newWantBook(bookName);
             }
-            yield this.spiderManagerService.queryBookSites(bookName);
-            yield this.spiderManagerService.grabQDBookChapter(bookName);
-            yield this.spiderManagerService.grabBookChapters(bookName, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
             yield this.spiderQueue.add('BookInit', {
                 bookName: bookName,
             });
@@ -86,10 +83,15 @@ let BooksController = class BooksController {
             if (fs.existsSync(filename)) {
                 data = fs.readFileSync(filename, 'utf-8');
             }
-            yield this.spiderQueue.add('ChapterPreGrab', {
-                bookName: name,
-                indexId,
-            });
+            for (let i = 0; i <= 3; i++) {
+                let preIndexId = parseInt(indexId) + i;
+                const jobId = `ChapterPreGrab-${name}-${preIndexId}`;
+                console.log(`pregrab:${jobId}`);
+                yield this.spiderQueue.add('ChapterPreGrab', {
+                    bookName: name,
+                    indexId: preIndexId,
+                }, { jobId });
+            }
             return data;
         });
     }

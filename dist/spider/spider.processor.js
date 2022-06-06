@@ -36,9 +36,14 @@ let SpiderProcessor = class SpiderProcessor {
     ChapterPreGrab(job) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`quene processor:ChapterPreGrab ${JSON.stringify(job)}`);
-            yield this.prefetchChapter(job.data);
-            job.progress(100);
-            return {};
+            const ret = yield this.prefetchChapter(job.data);
+            console.log(`queue:1111`);
+            yield job.progress(100);
+            console.log(`queue:2222`);
+            yield job.moveToCompleted();
+            console.log(`queue:3333`);
+            console.log(`quene processor:ChapterPreGrab ${JSON.stringify(job)} done`);
+            return ret;
         });
     }
     ReQueryBook(job) {
@@ -62,15 +67,13 @@ let SpiderProcessor = class SpiderProcessor {
     }
     prefetchChapter(data) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log(`prefetchChapter:${JSON.stringify(data)}`);
             const bookName = data.bookName;
             let indexId = data.indexId;
-            indexId = parseInt(indexId + "");
-            const indexs = [indexId];
-            for (let i = 0; i <= 10; i++) {
-                indexId += 1;
-                indexs.push(indexId);
-            }
-            yield this.spiderManager.grabBookChapters(bookName, indexs);
+            indexId = parseInt(indexId);
+            const ret = yield this.spiderManager.grabBookChapter(bookName, indexId);
+            console.log(`prefetchChapter:${ret}`);
+            return ret;
         });
     }
     doBookInit(data) {
@@ -79,7 +82,9 @@ let SpiderProcessor = class SpiderProcessor {
             const bookName = data.bookName;
             yield this.spiderManager.queryBookSites(bookName);
             yield this.spiderManager.grabQDBookChapter(bookName);
-            yield this.spiderManager.grabBookChapters(bookName, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+            for (let i = 0; i <= 10; i++) {
+                yield this.spiderManager.grabBookChapter(bookName, 1);
+            }
         });
     }
     grabQDBookChapter(data) {

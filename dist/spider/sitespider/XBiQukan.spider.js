@@ -54,15 +54,15 @@ class XBiQukanSpider extends spider_base_1.BaseSpider {
                         return false;
                     }
                 });
+                if (bookInfo) {
+                    bookInfo.siteKey = this.siteKey;
+                }
             }
             catch (error) {
                 bookInfo = false;
             }
             yield Utils_1.default.sleep(1000);
             yield this.releasePage(page);
-            if (bookInfo) {
-                bookInfo.siteKey = this.siteKey;
-            }
             console.log(`bookInfo:${JSON.stringify(bookInfo)}`);
             return bookInfo;
         });
@@ -96,14 +96,23 @@ class XBiQukanSpider extends spider_base_1.BaseSpider {
     }
     fetchChapterDetail(chapterVO) {
         return __awaiter(this, void 0, void 0, function* () {
-            const page = yield this.askPage();
-            yield page.goto(chapterVO.chapterURL, { waitUntil: 'networkidle2' });
-            yield Utils_1.default.sleep(3000);
-            const chapterContent = yield page.evaluate(() => {
-                const contentSel = '#content';
-                const contentDom = document.querySelector(contentSel);
-                return contentDom.textContent;
-            });
+            console.log(`fetchChapterDetail`);
+            let chapterContent = "";
+            let page;
+            try {
+                page = yield this.askPage();
+                yield page.goto(chapterVO.chapterURL, { waitUntil: 'networkidle2' });
+                yield Utils_1.default.sleep(3000);
+                chapterContent = yield page.evaluate(() => {
+                    const contentSel = '#content';
+                    const contentDom = document.querySelector(contentSel);
+                    return contentDom.textContent;
+                });
+            }
+            catch (error) {
+                chapterContent = "";
+                console.error(error);
+            }
             const chapterContentVO = chapterVO;
             chapterContentVO.content = chapterContent;
             yield this.releasePage(page);

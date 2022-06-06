@@ -52,6 +52,7 @@ export default class BrowserManager{
                 continue;
             }
             const page = this.pagePools.pop();
+            // if (page.waitForNavigation)
             return page;
         }
     }

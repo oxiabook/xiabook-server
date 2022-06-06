@@ -5,6 +5,7 @@ import { BooksService } from "./books.service";
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import * as fs from 'fs';
+import Bull = require("bull");
 @Controller("books")
 export class BooksController {
     constructor(
@@ -23,9 +24,9 @@ export class BooksController {
         if (!booksEntity) {
             booksEntity = await this.booksService.newWantBook(bookName);
         }
-        await this.spiderManagerService.queryBookSites(bookName);
-        await this.spiderManagerService.grabQDBookChapter(bookName);
-        await this.spiderManagerService.grabBookChapters(bookName, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        // await this.spiderManagerService.queryBookSites(bookName);
+        // await this.spiderManagerService.grabQDBookChapter(bookName);
+        // await this.spiderManagerService.grabBookChapters(bookName, 1);
         await this.spiderQueue.add('BookInit', {
             bookName: bookName,
         });
@@ -68,16 +69,27 @@ export class BooksController {
         if (fs.existsSync(filename)) {
             data = fs.readFileSync(filename, 'utf-8');
         }
-        await this.spiderQueue.add('ChapterPreGrab', {
-            bookName:name,
-            indexId,
-        });
+        // 预拉取10章
+        for (let i = 0; i <= 3; i++) {
+            let preIndexId = parseInt(indexId) + i;
+            const jobId = `ChapterPreGrab-${name}-${preIndexId}`
+            console.log(`pregrab:${jobId}`)
+            // const job:Bull.Job = await this.spiderQueue.getJob(jobId);
+            // if (job) {
+            //     console.log(`任务检测:${jobId}已存在:${JSON.stringify(job)}`)
+            //     // return;
+            // }
+            await this.spiderQueue.add('ChapterPreGrab', {
+                bookName:name,
+                indexId:preIndexId,
+            }, {jobId});
+            // await this.spiderQueue.add('ChapterPreGrab', {
+                // bookName:name,
+                // indexId:preIndexId,
+            // });
+        }
+
         return data;
-        // const bookEntity = await this.booksService.getBookByName(name);
-        // const bookChapters = await this.spiderManagerService.queryBookChapters(name)
-        // return {
-        //     bookEntity, bookChapters
-        // };
     }
 
     @Get("/test/:name")

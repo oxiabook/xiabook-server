@@ -132,20 +132,19 @@ export class SpiderManagerService {
             const ret = await this.grabOneChapterFromOneSite(siteChapterVO);
             console.log(`grab res:${ret}`)
             if (!ret) continue;
-            break;
+            return true;
         }
+        return false;
     }
 
-    async grabBookChapters(bookName: string, indexs: number[]): Promise<any> {
-        console.log(`grabBookChapters:${bookName}, ${indexs}`)
-        const qdChapters = await this.queryBookNeedFetchChapters(bookName, indexs);
-        // const allQuerys = await this.getBookAllQuery(bookName);
-        // console.log(`allQuerys:${JSON.stringify(qdChapters)}`)
-        for (const qdChapterEntity of qdChapters) {
-            await this.grabOneChapter(bookName, qdChapterEntity);
-            await Utils.sleep(100);
+    async grabBookChapter(bookName: string, indexId: number): Promise<any> {
+        console.log(`spiderManager:grabBookChapter:${bookName}, ${indexId}`)
+        const qdChapter = await this.queryBookNeedFetchChapter(bookName, indexId);
+        if (!qdChapter) {
+            console.log(`章节已存在:${bookName} ${indexId}`)
+            return true;
         }
-
+        return await this.grabOneChapter(bookName, qdChapter);
     }
 
     async saveChapterContent(bookName:string, chapterContentVO: SpiderSiteBookChapterContentVO) {
@@ -156,10 +155,6 @@ export class SpiderManagerService {
         Utils.checkdir(filename);
         fs.writeFileSync(filename, content);
     }
-
-    // async updateBookQueryWeight(bookQueryEntity: BooksQueryEntity) {
-    //     return await this.queryRepository.save(bookQueryEntity);
-    // }
 
     /**
      * 更新章节已抓取
@@ -210,16 +205,20 @@ export class SpiderManagerService {
      * @param name
      * @returns
      */
-    async queryBookNeedFetchChapters(name: string, indexs: number[]): Promise<ChapterEntity[]> {
+    async queryBookNeedFetchChapter(name: string, indexId: number): Promise<ChapterEntity> {
+        // console.log(`queryBookNeedFetchChapter:${name} ${indexId}`)
         const siteKey = SpiderSite.QD;
-        const isFetched = '0';
-        const chapters = await this.chapterRepository
-            .createQueryBuilder('ChapterEntity')
-            .where('bookName = :name AND siteKey = :siteKey AND isFetched = :isFetched', { name, siteKey, isFetched })
-            .andWhere('indexId in (:...indexs)', {indexs})
-            .orderBy('indexId')
-            .getMany();
-        return chapters;
+        const isFetched = 0;
+        const query = this.chapterRepository.createQueryBuilder('chapter')
+        query.where('bookName = :name AND siteKey = :siteKey AND isFetched = :isFetched AND indexId = :indexId', { name, siteKey, isFetched, indexId })
+        // query.where('bookName = :name AND siteKey = :siteKey', { name, siteKey })
+        // query.andWhere('isFetched = :isFetched', { isFetched })
+        // query.andWhere('indexId = :indexId)', {indexId})
+        // const sql = await query.getSql()
+        // console.log(`sql:${sql}`);
+        const entity = await query.getOne();
+        // console.log(`entity:${entity}`)
+        return entity;
     }
 
     /**

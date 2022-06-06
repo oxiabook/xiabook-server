@@ -119,18 +119,20 @@ let SpiderManagerService = class SpiderManagerService {
                 console.log(`grab res:${ret}`);
                 if (!ret)
                     continue;
-                break;
+                return true;
             }
+            return false;
         });
     }
-    grabBookChapters(bookName, indexs) {
+    grabBookChapter(bookName, indexId) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log(`grabBookChapters:${bookName}, ${indexs}`);
-            const qdChapters = yield this.queryBookNeedFetchChapters(bookName, indexs);
-            for (const qdChapterEntity of qdChapters) {
-                yield this.grabOneChapter(bookName, qdChapterEntity);
-                yield Utils_1.default.sleep(100);
+            console.log(`spiderManager:grabBookChapter:${bookName}, ${indexId}`);
+            const qdChapter = yield this.queryBookNeedFetchChapter(bookName, indexId);
+            if (!qdChapter) {
+                console.log(`章节已存在:${bookName} ${indexId}`);
+                return true;
             }
+            return yield this.grabOneChapter(bookName, qdChapter);
         });
     }
     saveChapterContent(bookName, chapterContentVO) {
@@ -169,17 +171,14 @@ let SpiderManagerService = class SpiderManagerService {
             return chapters;
         });
     }
-    queryBookNeedFetchChapters(name, indexs) {
+    queryBookNeedFetchChapter(name, indexId) {
         return __awaiter(this, void 0, void 0, function* () {
             const siteKey = spider_define_1.SpiderSite.QD;
-            const isFetched = '0';
-            const chapters = yield this.chapterRepository
-                .createQueryBuilder('ChapterEntity')
-                .where('bookName = :name AND siteKey = :siteKey AND isFetched = :isFetched', { name, siteKey, isFetched })
-                .andWhere('indexId in (:...indexs)', { indexs })
-                .orderBy('indexId')
-                .getMany();
-            return chapters;
+            const isFetched = 0;
+            const query = this.chapterRepository.createQueryBuilder('chapter');
+            query.where('bookName = :name AND siteKey = :siteKey AND isFetched = :isFetched AND indexId = :indexId', { name, siteKey, isFetched, indexId });
+            const entity = yield query.getOne();
+            return entity;
         });
     }
     getBookAllQuery(bookName) {
