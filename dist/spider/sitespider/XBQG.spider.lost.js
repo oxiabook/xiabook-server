@@ -110,6 +110,7 @@ class XBQGSpider extends spider_base_1.BaseSpider {
     }
     fetchChapterDetail(chapterVO) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log(`XBQG:fetchChapterDetail${JSON.stringify(chapterVO)}`);
             console.log(chapterVO);
             return;
         });

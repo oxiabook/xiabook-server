@@ -1,5 +1,6 @@
 import { BaseSpider } from '../spider.base';
 import { BookQueryVO, SpiderSite, SpiderSiteBookChapterVO } from '../spider.define';
+import Utils from '../Utils';
 
 /**
  * 起点小说爬取
@@ -42,6 +43,8 @@ export class QDSpider extends BaseSpider {
             };
         });
         bookInfo.siteKey = this.siteKey;
+        bookInfo.indexPage =  bookInfo.indexPage.replace('book.qidian.com/info/', 'm.qidian.com/book/')
+        bookInfo.indexPage =  bookInfo.indexPage.replace('#Catalog', 'catalog')
         console.log(`qd bookInfo:${JSON.stringify(bookInfo)}`)
         await this.releasePage(page);
         return bookInfo;
@@ -53,6 +56,8 @@ export class QDSpider extends BaseSpider {
      */
     async fetchBookChapters(indexPage: string): Promise<SpiderSiteBookChapterVO[]> {
         // throw new Error('Method not implemented.');
+        console.log(`QD.spider fetchBookChapters ${indexPage}`)
+        return await this.fetchBookChaptersFromMobile(indexPage);
         const page = await this.askPage();
         // await page.emulate(devices['iPhone X'])
         await page.goto(indexPage, { waitUntil: 'networkidle2' });
@@ -73,9 +78,61 @@ export class QDSpider extends BaseSpider {
             return chapters;
         });
         await this.releasePage(page);
-        console.log(`chapters:${chapters}`);
+        // console.log(`chapters:${chapters}`);
         return chapters;
     }
+
+    async fetchBookChaptersFromMobile(indexPage: string) {
+        // console.log("fetchBookChaptersFromMobile")
+        // https://book.qidian.com/info/1019664125/#Catalog
+        // https://m.qidian.com/book/1021617576/catalog/
+        // indexPage = indexPage.replace('book.qidian.com/info/', 'm.qidian.com/book/')
+        // indexPage = indexPage.replace('#Catalog', 'catalog')
+        console.log(`fetchBookChaptersFromMobile:${indexPage}`)
+        const page = await this.askPage();
+        // await page.emulate(devices['iPhone X'])
+        await page.goto(indexPage, { waitUntil: 'networkidle0' });
+        const chapters = [];
+        const titles = []
+        let lastLength = 0;
+        for (let i = 1; i < 200; i++) {
+            // 滚动页面并获取章节
+            const items = await page.evaluate((i) => {
+                const chapters = [];
+                window.scrollTo(0, i * 800);
+                const liaSel = '#volumes > li > h2 > a > span.chapter-index'
+                const alist = document.querySelectorAll(liaSel);
+                // #j-catalogWrap > div.volume-wrap > div:nth-child(1) > ul > li:nth-child(1) > h2 > a
+                for (let i = 0; i <= alist.length - 1; i++) {
+                    const title = alist[i].textContent
+                    const chapterVO = {
+                        siteKey:'QD',
+                        index: i + 1,
+                        title: title,
+                        chapterURL: "",
+                    };
+                    chapters.push(chapterVO);
+                }
+                return chapters;
+            }, i);
+            for (const chapterVO of items) {
+                if (titles.indexOf(chapterVO.title) == -1) {
+                    chapters.push(chapterVO)
+                    titles.push(chapterVO.title)
+                }
+            }
+            if (lastLength === chapters.length) {
+                break;
+            }
+            lastLength = chapters.length;
+            console.info(`滚动第${i}次 共抓取:${chapters.length}条`)
+            await Utils.sleep(200)
+        }
+        await this.releasePage(page);
+        // console.log(`chapters:${chapters}`);
+        return chapters;
+    }
+
     async fetchChapterDetail(chapterVO: SpiderSiteBookChapterVO): Promise<any> {
         // throw new Error('Method not implemented.');
         console.log(chapterVO);

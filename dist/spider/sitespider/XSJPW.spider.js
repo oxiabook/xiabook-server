@@ -93,14 +93,20 @@ class XSJPWSpider extends spider_base_1.BaseSpider {
     }
     fetchChapterDetail(chapterVO) {
         return __awaiter(this, void 0, void 0, function* () {
-            const page = yield this.askPage();
+            console.log(`xsjpw fetchChapterDetail 1 ${chapterVO.indexId}`);
+            const page = yield this.askPage(chapterVO.indexId);
+            console.log(typeof (page));
+            console.log(`xsjpw fetchChapterDetail 2 ${chapterVO.indexId}`);
             yield page.goto(chapterVO.chapterURL, { waitUntil: 'networkidle2' });
+            console.log(`xsjpw fetchChapterDetail 3 ${chapterVO.indexId}`);
             yield page.waitForSelector('#readcontent');
+            console.log(`xsjpw fetchChapterDetail 4 ${chapterVO.indexId}`);
             let chapterContent = yield page.evaluate(() => {
                 const contentSel = '#readcontent > div > div.txtwrap';
                 const contentDom = document.querySelector(contentSel);
                 return contentDom.innerHTML;
             });
+            console.log(`xsjpw fetchChapterDetail 5 ${chapterVO.indexId}`);
             yield this.releasePage(page);
             chapterContent = node_html_markdown_1.NodeHtmlMarkdown.translate(chapterContent, {}, undefined, undefined);
             const chapterContentVO = chapterVO;

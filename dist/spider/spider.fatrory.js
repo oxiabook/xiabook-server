@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SpiderFactory = void 0;
 const HaoTxt8_spider_1 = require("./sitespider/HaoTxt8.spider");
-const QBiQu_spider_1 = require("./sitespider/QBiQu.spider");
+const QBIQU_spider_1 = require("./sitespider/QBIQU.spider");
 const QD_spider_1 = require("./sitespider/QD.spider");
 const XBiQukan_spider_1 = require("./sitespider/XBiQukan.spider");
 const XSJPW_spider_1 = require("./sitespider/XSJPW.spider");
@@ -31,7 +31,7 @@ class SpiderFactory {
                     instance = new XSJPW_spider_1.XSJPWSpider();
                     break;
                 case spider_define_1.SpiderSite.QBIQU:
-                    instance = new QBiQu_spider_1.QBIQUSpider();
+                    instance = new QBIQU_spider_1.QBIQUSpider();
                     break;
                 case spider_define_1.SpiderSite.XBIQUKAN:
                     instance = new XBiQukan_spider_1.XBiQukanSpider();

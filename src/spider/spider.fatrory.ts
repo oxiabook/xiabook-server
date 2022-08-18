@@ -1,5 +1,5 @@
 import { HaoTxt8Spider } from './sitespider/HaoTxt8.spider';
-import { QBIQUSpider } from './sitespider/QBiQu.spider';
+import { QBIQUSpider } from './sitespider/QBIQU.spider';
 import { QDSpider } from './sitespider/QD.spider';
 import { XBiQukanSpider } from './sitespider/XBiQukan.spider';
 // import { XBQGSpider } from './sitespider/XBQG.spider';

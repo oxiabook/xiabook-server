@@ -38,3 +38,16 @@ https://github.com/TooBug/wemark
 puppteer
 
 https://medium.com/@migueloop/a-useful-puppeteer-examples-tutorial-set-bf5716aeda96
+
+
+ redis-cli KEYS "bull:SpiderQueue:ChapterPreGrab-成亲后王爷暴富了-*" | xargs redis-cli DEL
+
+build
+xiabook-server
+docker build -f Dockerfile -t xiabook/server:v1.0.8 . 
+
+
+todo
+QBIQUSpider 查徇容易crash
+
+docker composer

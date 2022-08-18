@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.QDSpider = void 0;
 const spider_base_1 = require("../spider.base");
 const spider_define_1 = require("../spider.define");
+const Utils_1 = require("../Utils");
 class QDSpider extends spider_base_1.BaseSpider {
     constructor() {
         super(...arguments);
@@ -46,6 +47,8 @@ class QDSpider extends spider_base_1.BaseSpider {
                 };
             });
             bookInfo.siteKey = this.siteKey;
+            bookInfo.indexPage = bookInfo.indexPage.replace('book.qidian.com/info/', 'm.qidian.com/book/');
+            bookInfo.indexPage = bookInfo.indexPage.replace('#Catalog', 'catalog');
             console.log(`qd bookInfo:${JSON.stringify(bookInfo)}`);
             yield this.releasePage(page);
             return bookInfo;
@@ -53,6 +56,8 @@ class QDSpider extends spider_base_1.BaseSpider {
     }
     fetchBookChapters(indexPage) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log(`QD.spider fetchBookChapters ${indexPage}`);
+            return yield this.fetchBookChaptersFromMobile(indexPage);
             const page = yield this.askPage();
             yield page.goto(indexPage, { waitUntil: 'networkidle2' });
             const chapters = yield page.evaluate(() => {
@@ -71,7 +76,49 @@ class QDSpider extends spider_base_1.BaseSpider {
                 return chapters;
             });
             yield this.releasePage(page);
-            console.log(`chapters:${chapters}`);
+            return chapters;
+        });
+    }
+    fetchBookChaptersFromMobile(indexPage) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`fetchBookChaptersFromMobile:${indexPage}`);
+            const page = yield this.askPage();
+            yield page.goto(indexPage, { waitUntil: 'networkidle0' });
+            const chapters = [];
+            const titles = [];
+            let lastLength = 0;
+            for (let i = 1; i < 200; i++) {
+                const items = yield page.evaluate((i) => {
+                    const chapters = [];
+                    window.scrollTo(0, i * 800);
+                    const liaSel = '#volumes > li > h2 > a > span.chapter-index';
+                    const alist = document.querySelectorAll(liaSel);
+                    for (let i = 0; i <= alist.length - 1; i++) {
+                        const title = alist[i].textContent;
+                        const chapterVO = {
+                            siteKey: 'QD',
+                            index: i + 1,
+                            title: title,
+                            chapterURL: "",
+                        };
+                        chapters.push(chapterVO);
+                    }
+                    return chapters;
+                }, i);
+                for (const chapterVO of items) {
+                    if (titles.indexOf(chapterVO.title) == -1) {
+                        chapters.push(chapterVO);
+                        titles.push(chapterVO.title);
+                    }
+                }
+                if (lastLength === chapters.length) {
+                    break;
+                }
+                lastLength = chapters.length;
+                console.info(`滚动第${i}次 共抓取:${chapters.length}条`);
+                yield Utils_1.default.sleep(200);
+            }
+            yield this.releasePage(page);
             return chapters;
         });
     }

@@ -10,25 +10,29 @@ import { BooksQueryEntity } from '../entity/booksquery.entity';
 import * as redisStore from 'cache-manager-redis-store';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
+import BrowserManager from '../spider/browser.manager';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([BooksEntity, ChapterEntity, BooksQueryEntity]),
-        CacheModule.register({
-            store: redisStore,
-            host: '127.0.0.1',
-            port: 6379,
-            db: 0,
-            options: {
-                reviveBuffers: true,
-                binaryAsStream: true,
-                ttl: 60 * 60 /* seconds */,
-                maxsize: 1000 * 1000 * 1000 /* max size in bytes on disk */,
-                path: 'diskcache',
-                preventfill: true,
-            },
-        }),
-        ConfigModule.forRoot(),
+        
+        // CacheModule.register(
+        //     {
+        //         store: redisStore,
+        //         host: '127.0.0.1',
+        //         port: 6379,
+        //         db: 0,
+        //         options: {
+        //             reviveBuffers: true,
+        //             binaryAsStream: true,
+        //             ttl: 60 * 60 /* seconds */,
+        //             maxsize: 1000 * 1000 * 1000 /* max size in bytes on disk */,
+        //             path: 'diskcache',
+        //             preventfill: true,
+        //         },
+        //     }
+        // ),
+        // ConfigModule.forRoot(),
         BullModule.registerQueue({
             name: 'SpiderQueue',
         }),

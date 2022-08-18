@@ -5,11 +5,6 @@ import {
     Entity,
     PrimaryGeneratedColumn,
     Column,
-    // OneToOne,
-    // ManyToOne,
-    // OneToMany,
-    // JoinColumn,
-    // AfterUpdate,
     BeforeUpdate,
     Index,
 } from 'typeorm';

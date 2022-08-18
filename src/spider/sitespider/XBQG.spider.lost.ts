@@ -126,6 +126,7 @@ export class XBQGSpider extends BaseSpider {
 
     async fetchChapterDetail(chapterVO: SpiderSiteBookChapterVO): Promise<any> {
         // throw new Error('Method not implemented.');
+        console.log(`XBQG:fetchChapterDetail${JSON.stringify(chapterVO)}`)
         console.log(chapterVO);
         return;
     }

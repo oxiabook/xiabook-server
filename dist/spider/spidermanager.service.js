@@ -44,6 +44,7 @@ let SpiderManagerService = class SpiderManagerService {
     }
     queryBookSites(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            yield this.delAllBookQuery(name);
             const sites = [spider_define_1.SpiderSite.QD, spider_define_1.SpiderSite.QBIQU, spider_define_1.SpiderSite.XSJPW, spider_define_1.SpiderSite.XBIQUKAN, spider_define_1.SpiderSite.HAOTXT8];
             for (const site of sites) {
                 const queryEntity = yield this.getLocalBookQuery(name, site);
@@ -52,7 +53,6 @@ let SpiderManagerService = class SpiderManagerService {
                 }
                 const spider = yield spider_fatrory_1.SpiderFactory.createSpider(site);
                 const bookQueryVO = yield spider.queryBook(name);
-                console.log(`queryBookSites:site:${site} ${JSON.stringify(bookQueryVO)}`);
                 if (!bookQueryVO)
                     continue;
                 yield this.saveBookQuery(bookQueryVO);
@@ -62,7 +62,6 @@ let SpiderManagerService = class SpiderManagerService {
     }
     getSiteChaptersFromCache(queryEntity) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log(`getSiteChaptersFromCache:${queryEntity.siteKey} ${queryEntity.bookName}`);
             const key = `bookchaptermap_${queryEntity.siteKey}_${queryEntity.bookName}`;
             const chapters = yield this.cacheManager.get(key);
             if (_.isEmpty(chapters)) {
@@ -75,9 +74,9 @@ let SpiderManagerService = class SpiderManagerService {
             return chapters;
         });
     }
-    grabOneChapterFromOneSite(siteChapterVO) {
+    grabChapterDetailFromOneSite(siteChapterVO) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log(`grabOneChapterFromOneSite:${siteChapterVO.bookName} ${siteChapterVO.indexId} ${siteChapterVO.siteKey}`);
+            console.log(`grabChapterDetailFromOneSite1:${siteChapterVO.bookName} ${siteChapterVO.indexId} ${siteChapterVO.siteKey}`);
             const spider = yield spider_fatrory_1.SpiderFactory.createSpider(siteChapterVO.siteKey);
             const chapterContentVO = yield spider.fetchChapterDetail(siteChapterVO);
             let addOrSub = 0;
@@ -87,7 +86,6 @@ let SpiderManagerService = class SpiderManagerService {
             else {
                 addOrSub = -1;
             }
-            console.log(`grabOneChapterFromOneSite:${chapterContentVO.content.length}`);
             yield this.updateBookSiteWeight(siteChapterVO.bookName, siteChapterVO.siteKey, addOrSub);
             if (chapterContentVO.content) {
                 yield this.saveChapterContent(siteChapterVO.bookName, chapterContentVO);
@@ -98,8 +96,16 @@ let SpiderManagerService = class SpiderManagerService {
     }
     updateBookSiteWeight(bookName, siteKey, addOrSub) {
         return __awaiter(this, void 0, void 0, function* () {
-            const res = yield this.queryRepository.update({ bookName, siteKey }, { weight: () => `weight+${addOrSub}` });
-            return res.affected === 1;
+            const query = this.queryRepository.createQueryBuilder('BookQueryEntity');
+            query.where('bookName = :bookName AND siteKey = :siteKey', { bookName, siteKey });
+            const entity = yield query.getOne();
+            entity.weight += addOrSub;
+            if (entity.weight > 100)
+                entity.weight = 100;
+            if (entity.weight < 0)
+                entity.weight = 0;
+            const res = yield this.queryRepository.save(entity);
+            return true;
         });
     }
     grabOneChapter(bookName, qdChapterEntity) {
@@ -115,8 +121,7 @@ let SpiderManagerService = class SpiderManagerService {
                     continue;
                 siteChapterVO.indexId = qdChapterEntity.indexId;
                 siteChapterVO.bookName = qdChapterEntity.bookName;
-                const ret = yield this.grabOneChapterFromOneSite(siteChapterVO);
-                console.log(`grab res:${ret}`);
+                const ret = yield this.grabChapterDetailFromOneSite(siteChapterVO);
                 if (!ret)
                     continue;
                 return true;
@@ -153,9 +158,12 @@ let SpiderManagerService = class SpiderManagerService {
     }
     grabQDBookChapter(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log(`grabQDBookChapter:${name}`);
             const bookQueryEntity = yield this.getLocalBookQuery(name, spider_define_1.SpiderSite.QD);
+            console.log(bookQueryEntity);
             const spider = yield spider_fatrory_1.SpiderFactory.createSpider(spider_define_1.SpiderSite.QD);
             const chapters = yield spider.fetchBookChapters(bookQueryEntity.indexPage);
+            console.log(`抓取到起点章节列表:${name} ${chapters.length}`);
             yield this.saveQDBookChapters(name, chapters);
             return chapters;
         });
@@ -217,7 +225,7 @@ let SpiderManagerService = class SpiderManagerService {
                     }
                     else {
                         yield this.chapterRepository.save(chapterEntity);
-                        console.log(`savedChapter:${chapterEntity.id}`);
+                        console.log(`savedQDChapter:${name} ${chapterEntity.id}`);
                     }
                 }
                 catch (error) {
@@ -246,6 +254,13 @@ let SpiderManagerService = class SpiderManagerService {
                 const savedBook = yield this.queryRepository.save(newBookQuery);
                 return savedBook;
             }
+        });
+    }
+    delAllBookQuery(bookName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`删除${bookName}的所有远端查徇`);
+            const res = yield this.queryRepository.delete({ bookName });
+            return res.affected > 0;
         });
     }
     grabBookQDChapters(name) {

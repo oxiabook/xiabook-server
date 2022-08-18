@@ -18,7 +18,7 @@ export class SpiderController {
 
     @Get('/testSpider/:bookname')
     async testSpider(@Param('bookname') bookname: string): Promise<string> {
-        const spider = await SpiderFactory.createSpider(SpiderSite.XBIQUKAN);
+        const spider = await SpiderFactory.createSpider(SpiderSite.QD);
         const bookQueryVO = await spider.queryBook(bookname);
         console.log(`bookQueryVO:${JSON.stringify(bookQueryVO)}`);
         await Utils.sleep(3000);
@@ -26,15 +26,24 @@ export class SpiderController {
             return;
         }
         const chapters = await spider.fetchBookChapters(bookQueryVO.indexPage);
-        console.log(`chapters:${JSON.stringify(chapters)}`);
-        await Utils.sleep(3000);
-        const chapterDetail = await spider.fetchChapterDetail(chapters[10]);
-        console.log(`chapterDetail:${JSON.stringify(chapterDetail)}`);
+        console.log(chapters)
+        // const spider = await SpiderFactory.createSpider(SpiderSite.QBIQU);
+        // const bookQueryVO = await spider.queryBook(bookname);
+        // console.log(`bookQueryVO:${JSON.stringify(bookQueryVO)}`);
+        // await Utils.sleep(3000);
+        // if (!bookQueryVO) {
+        //     return;
+        // }
+        // const chapters = await spider.fetchBookChapters(bookQueryVO.indexPage);
+        // console.log(`chapters:${JSON.stringify(chapters)}`);
+        // await Utils.sleep(3000);
+        // const chapterDetail = await spider.fetchChapterDetail(chapters[10]);
+        // console.log(`chapterDetail:${JSON.stringify(chapterDetail)}`);
 
-        await Utils.sleep(3000);
-        const chapterDetail2 = await spider.fetchChapterDetail(chapters[20]);
-        fs.writeFileSync("xxxx.md", chapterDetail2.content);
-        console.log(`chapterDetail2:${JSON.stringify(chapterDetail2)}`);
+        // await Utils.sleep(3000);
+        // const chapterDetail2 = await spider.fetchChapterDetail(chapters[20]);
+        // fs.writeFileSync("xxxx.md", chapterDetail2.content);
+        // console.log(`chapterDetail2:${JSON.stringify(chapterDetail2)}`);
         return 'ok';
     }
 

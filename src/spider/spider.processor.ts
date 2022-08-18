@@ -17,17 +17,13 @@ export class SpiderProcessor {
     }
 
     @Process("ChapterPreGrab")
-    async ChapterPreGrab(job: Job<unknown>) {
-        console.log(`quene processor:ChapterPreGrab ${JSON.stringify(job)}`)
+    async ChapterPreGrab(job: Job<unknown>, done) {
+        console.log(`quene processor:ChapterPreGrab ${job.id}`)
         const ret = await this.prefetchChapter(job.data);
-        console.log(`queue:1111`)
-        await job.progress(100);
-        console.log(`queue:2222`)
-        // await job.finished();
-        // await job.remove();
-        await job.moveToCompleted();
-        console.log(`queue:3333`)
-        console.log(`quene processor:ChapterPreGrab ${JSON.stringify(job)} done`)
+        // await job.progress(100);
+        // await job.();
+        done(null, ret);
+        console.log(`quene processor:ChapterPreGrab ${job.id} done`)
         return ret;
     }
     
@@ -54,9 +50,9 @@ export class SpiderProcessor {
 
     @OnQueueActive()
     onActive(job: Job) {
-        console.log(
-            `Processing job ${job.id} of type ${job.name} with data ${JSON.stringify(job.data)}...`,
-        );
+        // console.log(
+        //     `Active job ${job.id} of type ${job.name} with data ${JSON.stringify(job.data)}...`,
+        // );
     }
 
     // @OnQueueCompleted()
@@ -67,13 +63,13 @@ export class SpiderProcessor {
     // }
     private async prefetchChapter(data: any) {
         // this.spiderManager.grabBookChapters(data.bookName, [100,101,102,103])
-        console.log(`prefetchChapter:${JSON.stringify(data)}`)
+        // console.log(`prefetchChapter:${JSON.stringify(data)}`)
         const bookName = data.bookName;
         let indexId = data.indexId;
         indexId = parseInt(indexId)
         // const indexs = [indexId];
         const ret = await this.spiderManager.grabBookChapter(bookName, indexId);
-        console.log(`prefetchChapter:${ret}`);
+        // console.log(`prefetchChapter:${ret}`);
         return ret
     }
 

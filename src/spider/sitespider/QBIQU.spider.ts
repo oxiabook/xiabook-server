@@ -1,6 +1,6 @@
 import { BaseSpider } from '../spider.base';
 import { BookQueryVO, SpiderSite, SpiderSiteBookChapterContentVO, SpiderSiteBookChapterVO } from '../spider.define';
-import puppeteer = require('puppeteer');
+import puppeteer = require('puppeteer-core');
 import Utils from '../Utils';
 
 /**
@@ -17,24 +17,23 @@ export class QBIQUSpider extends BaseSpider {
     async queryBook(name: string): Promise<BookQueryVO|false> {
         console.log(`QBIQUSpider:queryBook:${name}`);
         // const queryurl = encodeURI(this.queryUrl.replace('{book_name}', name));
-        const options = {
-            headless:false,
-        };
-        const browser = await puppeteer.launch(options);
         let bookInfo;
+        let page;
+        let newPage;
         try {
-            // const browser = await this.getPuppeteerBrowser();
-            const page = await browser.newPage();
-            // await page.emulate(devices['iPhone X'])
+            const browser = await this.getBrowser()
+            const newPagePromise = new Promise(x => browser.once('targetcreated', target => x(target.page())));//创建newPagePromise对象
+            page  = await this.askPage();
             await page.goto(this.baseUrl, { waitUntil: 'networkidle2' });
             await page.waitForSelector('#wd');
             await page.type('#wd', name, { delay: 100 }); //自动在搜索框里慢慢输入书名 ,
-            page.click('#sss'); //然后点击搜索
-            // await page.waitFor(3000);
-            await Utils.sleep(1000);
-            const pages = await browser.pages();
-            const newPage = pages[2];
+            await page.click('#sss'); //然后点击搜索 qbiqu会弹出新页面
+            newPage = await newPagePromise as puppeteer.Page;//声明一个newPage对象
+            await Utils.sleep(3000);
+            // const pageReg = new RegExp("([0-9]{2})_([0-9]{5})");
+            // newPage = await this.pickSpecPageByUrl("https://www.qbiqu.com/", pageReg)
             await newPage.waitForSelector('#wrapper');
+
             bookInfo = await newPage.evaluate(() => {
                 try {
                     const thisurl = 'https://www.qbiqu.com';
@@ -61,42 +60,20 @@ export class QBIQUSpider extends BaseSpider {
                 }
             });
         } catch (error) {
-            console.log(`xxxerror:${error}`);
             bookInfo = false;
         }
         if (bookInfo) {
             bookInfo.siteKey = this.siteKey;
         }
-        await browser.close();
+        if (newPage) {
+            console.log(`newPage:close`)
+            if (!newPage.isClosed()) {
+                await newPage.close();
+            }
+        }
+        await this.releasePage(page);
         return bookInfo;
     }
-
-    // /**
-    //  * 查徇书籍列表面的分页数
-    //  * @param indexPage
-    //  * @returns
-    //  */
-    // async fetchBookChapterPage(indexPage: string):Promise<any>{
-    //     const page = await this.getPuppeteerPage(false);
-    //     // await page.emulate(devices['iPhone X'])
-    //     await page.goto(indexPage, { waitUntil: 'networkidle2' });
-    //     await page.waitForSelector('#list');
-    //     const pageNums = await page.evaluate(() => {
-    //         const liSel = '#list > dl > dd > a'
-    //         const alist = document.querySelectorAll(liSel);
-    //         const pageNums = [];
-    //         for (let i = 0; i <= alist.length - 1; i++) {
-    //             const pageNum = alist[i].textContent;
-    //             if (parseInt(pageNum).toString() != 'NaN') {
-    //                 pageNums.push(pageNum)
-    //             }
-    //         }
-    //         console.log(pageNums)
-    //         return pageNums;
-    //     });
-    //     console.log(`chapterPage:${JSON.stringify(pageNums)}`);
-    //     return pageNums;
-    // }
 
     /**
      * 取得某书的章节列表
@@ -115,7 +92,7 @@ export class QBIQUSpider extends BaseSpider {
             const chapters = [];
             for (let i = 0; i <= alist.length - 1; i++) {
                 const chapterVO = {
-                    siteKey: 'XBQG',
+                    siteKey: 'QBIQU',
                     index: i + 1,
                     title: alist[i].textContent,
                     chapterURL: alist[i].getAttribute('href'),
@@ -130,32 +107,17 @@ export class QBIQUSpider extends BaseSpider {
         return chapters;
     }
 
-    // /**
-    //  * 获取某页的章节列表
-    //  * @param indexPage
-    //  * @param pageNum
-    //  * @returns
-    //  */
-    // async fetchPageChapters(indexPage: string): Promise<any> {
-       
-    // }
-
     async fetchChapterDetail(chapterVO: SpiderSiteBookChapterVO): Promise<SpiderSiteBookChapterContentVO> {
-        // throw new Error('Method not implemented.');
         const chapterURL = `${this.baseUrl}${chapterVO.chapterURL}`;
-        // console.log('fetchChapterDetail', chapterURL);
         const page = await this.askPage();
-        // await page.emulate(devices['iPhone X'])
         await page.goto(chapterURL, { waitUntil: 'networkidle2' });
         await page.waitForSelector('#content');
         const chapterContent = await page.evaluate(() => {
             const contentSel = '#content';
             const contentDom = document.querySelector(contentSel);
-            // console.log(contentDom.textContent)
             return contentDom.textContent;
         });
         await this.releasePage(page);
-        // console.log('chapterContent', chapterContent)
         const chapterContentVO = (chapterVO as SpiderSiteBookChapterContentVO);
         chapterContentVO.content = chapterContent
         return chapterContentVO;

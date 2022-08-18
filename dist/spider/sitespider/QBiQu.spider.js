@@ -12,7 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.QBIQUSpider = void 0;
 const spider_base_1 = require("../spider.base");
 const spider_define_1 = require("../spider.define");
-const puppeteer = require("puppeteer");
 const Utils_1 = require("../Utils");
 class QBIQUSpider extends spider_base_1.BaseSpider {
     constructor() {
@@ -24,20 +23,19 @@ class QBIQUSpider extends spider_base_1.BaseSpider {
     queryBook(name) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`QBIQUSpider:queryBook:${name}`);
-            const options = {
-                headless: false,
-            };
-            const browser = yield puppeteer.launch(options);
             let bookInfo;
+            let page;
+            let newPage;
             try {
-                const page = yield browser.newPage();
+                const browser = yield this.getBrowser();
+                const newPagePromise = new Promise(x => browser.once('targetcreated', target => x(target.page())));
+                page = yield this.askPage();
                 yield page.goto(this.baseUrl, { waitUntil: 'networkidle2' });
                 yield page.waitForSelector('#wd');
                 yield page.type('#wd', name, { delay: 100 });
-                page.click('#sss');
-                yield Utils_1.default.sleep(1000);
-                const pages = yield browser.pages();
-                const newPage = pages[2];
+                yield page.click('#sss');
+                newPage = (yield newPagePromise);
+                yield Utils_1.default.sleep(3000);
                 yield newPage.waitForSelector('#wrapper');
                 bookInfo = yield newPage.evaluate(() => {
                     try {
@@ -65,13 +63,18 @@ class QBIQUSpider extends spider_base_1.BaseSpider {
                 });
             }
             catch (error) {
-                console.log(`xxxerror:${error}`);
                 bookInfo = false;
             }
             if (bookInfo) {
                 bookInfo.siteKey = this.siteKey;
             }
-            yield browser.close();
+            if (newPage) {
+                console.log(`newPage:close`);
+                if (!newPage.isClosed()) {
+                    yield newPage.close();
+                }
+            }
+            yield this.releasePage(page);
             return bookInfo;
         });
     }
@@ -87,7 +90,7 @@ class QBIQUSpider extends spider_base_1.BaseSpider {
                 const chapters = [];
                 for (let i = 0; i <= alist.length - 1; i++) {
                     const chapterVO = {
-                        siteKey: 'XBQG',
+                        siteKey: 'QBIQU',
                         index: i + 1,
                         title: alist[i].textContent,
                         chapterURL: alist[i].getAttribute('href'),
@@ -121,4 +124,4 @@ class QBIQUSpider extends spider_base_1.BaseSpider {
     }
 }
 exports.QBIQUSpider = QBIQUSpider;
-//# sourceMappingURL=QBiQu.spider.js.map
+//# sourceMappingURL=QBIQU.spider.js.map

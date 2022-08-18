@@ -1,10 +1,6 @@
-// import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-// import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { AppModule } from './app.module';
-// import { SpiderModule } from './spider/spider.module';
 import * as path from 'path'
-import { join } from 'path';
 import * as serveStatic from 'serve-static';
 
 async function bootstrap() {

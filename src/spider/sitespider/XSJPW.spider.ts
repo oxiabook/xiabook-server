@@ -102,15 +102,25 @@ export class XSJPWSpider extends BaseSpider {
      * @returns 
      */
     async fetchChapterDetail(chapterVO: SpiderSiteBookChapterVO): Promise<any> {
-        const page = await this.askPage();
+        console.log(`xsjpw fetchChapterDetail 1 ${chapterVO.indexId}`)
+        const page = await this.askPage(chapterVO.indexId);
+        console.log(typeof(page))
+        console.log(`xsjpw fetchChapterDetail 2 ${chapterVO.indexId}`)
+
         await page.goto(chapterVO.chapterURL, { waitUntil: 'networkidle2' });
+        console.log(`xsjpw fetchChapterDetail 3 ${chapterVO.indexId}`)
+
         await page.waitForSelector('#readcontent');
+        console.log(`xsjpw fetchChapterDetail 4 ${chapterVO.indexId}`)
+
         let chapterContent = await page.evaluate(() => {
             const contentSel = '#readcontent > div > div.txtwrap';
             const contentDom = document.querySelector(contentSel);
             // console.log(contentDom.textContent)
             return contentDom.innerHTML;
         });
+        console.log(`xsjpw fetchChapterDetail 5 ${chapterVO.indexId}`)
+
         await this.releasePage(page);
         // console.log(`chapterContent1:${chapterContent}`);
         // chapterContent = chapterContent.replace("<br>", "\n")

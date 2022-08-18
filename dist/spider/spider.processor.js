@@ -33,16 +33,12 @@ let SpiderProcessor = class SpiderProcessor {
             return {};
         });
     }
-    ChapterPreGrab(job) {
+    ChapterPreGrab(job, done) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log(`quene processor:ChapterPreGrab ${JSON.stringify(job)}`);
+            console.log(`quene processor:ChapterPreGrab ${job.id}`);
             const ret = yield this.prefetchChapter(job.data);
-            console.log(`queue:1111`);
-            yield job.progress(100);
-            console.log(`queue:2222`);
-            yield job.moveToCompleted();
-            console.log(`queue:3333`);
-            console.log(`quene processor:ChapterPreGrab ${JSON.stringify(job)} done`);
+            done(null, ret);
+            console.log(`quene processor:ChapterPreGrab ${job.id} done`);
             return ret;
         });
     }
@@ -63,16 +59,13 @@ let SpiderProcessor = class SpiderProcessor {
         });
     }
     onActive(job) {
-        console.log(`Processing job ${job.id} of type ${job.name} with data ${JSON.stringify(job.data)}...`);
     }
     prefetchChapter(data) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log(`prefetchChapter:${JSON.stringify(data)}`);
             const bookName = data.bookName;
             let indexId = data.indexId;
             indexId = parseInt(indexId);
             const ret = yield this.spiderManager.grabBookChapter(bookName, indexId);
-            console.log(`prefetchChapter:${ret}`);
             return ret;
         });
     }
@@ -111,7 +104,7 @@ __decorate([
 __decorate([
     (0, bull_1.Process)("ChapterPreGrab"),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], SpiderProcessor.prototype, "ChapterPreGrab", null);
 __decorate([

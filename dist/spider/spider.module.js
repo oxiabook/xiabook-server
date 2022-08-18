@@ -22,7 +22,6 @@ const booksquery_entity_1 = require("../entity/booksquery.entity");
 const chapter_entity_1 = require("../entity/chapter.entity");
 const spider_controller_1 = require("./spider.controller");
 const spidermanager_service_1 = require("./spidermanager.service");
-const redisStore = require("cache-manager-redis-store");
 const config_1 = require("@nestjs/config");
 const bull_1 = require("@nestjs/bull");
 const spider_processor_1 = require("./spider.processor");
@@ -40,20 +39,8 @@ SpiderModule = __decorate([
     (0, common_1.Module)({
         imports: [
             typeorm_1.TypeOrmModule.forFeature([booksquery_entity_1.BooksQueryEntity, chapter_entity_1.ChapterEntity]),
-            common_1.CacheModule.register({
-                store: redisStore,
-                host: '127.0.0.1',
-                port: 6379,
-                db: 0,
-                options: {
-                    reviveBuffers: true,
-                    binaryAsStream: true,
-                    ttl: 60 * 60,
-                    maxsize: 1000 * 1000 * 1000,
-                    path: 'diskcache',
-                    preventfill: true,
-                },
-            }), config_1.ConfigModule.forRoot(),
+            common_1.CacheModule.register(),
+            config_1.ConfigModule.forRoot(),
             bull_1.BullModule.registerQueue({
                 name: 'SpiderQueue'
             }),

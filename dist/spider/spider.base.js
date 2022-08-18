@@ -16,14 +16,24 @@ class BaseSpider {
         return __awaiter(this, void 0, void 0, function* () {
         });
     }
-    askPage() {
+    getBrowser() {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield browser_manager_1.default.I().askPage();
+            return browser_manager_1.default.I().getBrowser();
+        });
+    }
+    askPage(tag = "") {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield browser_manager_1.default.I().askPage(tag);
         });
     }
     releasePage(page) {
         return __awaiter(this, void 0, void 0, function* () {
             yield browser_manager_1.default.I().releasePage(page);
+        });
+    }
+    pickSpecPageByUrl(urlPrefix, reg) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield browser_manager_1.default.I().pickSpecPageByUrl(urlPrefix, reg);
         });
     }
 }

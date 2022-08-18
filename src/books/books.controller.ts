@@ -82,7 +82,12 @@ export class BooksController {
             await this.spiderQueue.add('ChapterPreGrab', {
                 bookName:name,
                 indexId:preIndexId,
-            }, {jobId});
+            }, {
+                jobId,
+                timeout:20000,
+                removeOnComplete:true,
+                removeOnFail:true,
+            });
             // await this.spiderQueue.add('ChapterPreGrab', {
                 // bookName:name,
                 // indexId:preIndexId,

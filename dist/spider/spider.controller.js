@@ -27,7 +27,6 @@ const spider_define_1 = require("./spider.define");
 const spider_fatrory_1 = require("./spider.fatrory");
 const spidermanager_service_1 = require("./spidermanager.service");
 const Utils_1 = require("./Utils");
-const fs = require("fs");
 let SpiderController = class SpiderController {
     constructor(spiderManager) {
         this.spiderManager = spiderManager;
@@ -41,7 +40,7 @@ let SpiderController = class SpiderController {
     }
     testSpider(bookname) {
         return __awaiter(this, void 0, void 0, function* () {
-            const spider = yield spider_fatrory_1.SpiderFactory.createSpider(spider_define_1.SpiderSite.XBIQUKAN);
+            const spider = yield spider_fatrory_1.SpiderFactory.createSpider(spider_define_1.SpiderSite.QD);
             const bookQueryVO = yield spider.queryBook(bookname);
             console.log(`bookQueryVO:${JSON.stringify(bookQueryVO)}`);
             yield Utils_1.default.sleep(3000);
@@ -49,14 +48,7 @@ let SpiderController = class SpiderController {
                 return;
             }
             const chapters = yield spider.fetchBookChapters(bookQueryVO.indexPage);
-            console.log(`chapters:${JSON.stringify(chapters)}`);
-            yield Utils_1.default.sleep(3000);
-            const chapterDetail = yield spider.fetchChapterDetail(chapters[10]);
-            console.log(`chapterDetail:${JSON.stringify(chapterDetail)}`);
-            yield Utils_1.default.sleep(3000);
-            const chapterDetail2 = yield spider.fetchChapterDetail(chapters[20]);
-            fs.writeFileSync("xxxx.md", chapterDetail2.content);
-            console.log(`chapterDetail2:${JSON.stringify(chapterDetail2)}`);
+            console.log(chapters);
             return 'ok';
         });
     }
